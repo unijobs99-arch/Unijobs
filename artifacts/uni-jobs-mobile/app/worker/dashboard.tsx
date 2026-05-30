@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
@@ -143,37 +143,59 @@ function ProfileView({ worker, onEdit, t, c }: any) {
 }
 
 function EditForm({ form, setField, onSave, onCancel, saving, t, c }: any) {
-  const fields = [
-    { key: "name", label: t.name },
-    { key: "fatherName", label: t.fatherName },
-    { key: "address", label: t.address, multiline: true },
-    { key: "city", label: t.city },
-    { key: "experience", label: t.experience },
-  ];
+  const fatherRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const experienceRef = useRef<TextInput>(null);
+
   return (
     <View>
-      {fields.map((f) => (
-        <View key={f.key} style={{ marginBottom: 14 }}>
-          <Text style={{ fontSize: 13, color: c.mutedForeground, fontFamily: "Inter_500Medium", marginBottom: 6 }}>{f.label}</Text>
-          <TextInput
-            style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontFamily: "Inter_400Regular", backgroundColor: c.card, color: c.text, ...(f.multiline ? { height: 80, textAlignVertical: "top" } : {}) }}
-            value={form[f.key] || ""} onChangeText={(v) => setField(f.key, v)} multiline={!!f.multiline}
-          />
-        </View>
-      ))}
+      {/* Name */}
+      <EditFieldRow label={t.name} value={form.name || ""} onChangeText={(v: string) => setField("name", v)}
+        returnKeyType="next" onSubmitEditing={() => fatherRef.current?.focus()} c={c} />
+      {/* Father name */}
+      <EditFieldRow ref={fatherRef} label={t.fatherName} value={form.fatherName || ""} onChangeText={(v: string) => setField("fatherName", v)}
+        returnKeyType="next" onSubmitEditing={() => cityRef.current?.focus()} c={c} />
+      {/* Address (multiline — no chain) */}
+      <EditFieldRow label={t.address} value={form.address || ""} onChangeText={(v: string) => setField("address", v)} multiline c={c} />
+      {/* City */}
+      <EditFieldRow ref={cityRef} label={t.city} value={form.city || ""} onChangeText={(v: string) => setField("city", v)}
+        returnKeyType="next" onSubmitEditing={() => experienceRef.current?.focus()} c={c} />
+      {/* Experience */}
+      <EditFieldRow ref={experienceRef} label={t.experience} value={form.experience || ""} onChangeText={(v: string) => setField("experience", v)}
+        returnKeyType="done" onSubmitEditing={onSave} c={c} />
+
       <PickerRow label={t.category} value={form.category} options={CATEGORIES} onSelect={(v: string) => setField("category", v)} c={c} />
       <PickerRow label={t.education} value={form.education} options={EDUCATION} onSelect={(v: string) => setField("education", v)} c={c} />
+
       <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
-        <TouchableOpacity style={{ flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: "center", backgroundColor: c.secondary }} onPress={onCancel} activeOpacity={0.85}>
+        <TouchableOpacity style={{ flex: 1, borderRadius: 14, paddingVertical: 16, minHeight: 54, alignItems: "center", justifyContent: "center", backgroundColor: c.secondary }} onPress={onCancel} activeOpacity={0.85}>
           <Text style={{ fontSize: 15, fontWeight: "600" as const, color: c.text, fontFamily: "Inter_600SemiBold" }}>{t.cancel}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={{ flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: "center", backgroundColor: saving ? c.muted : c.primary }} onPress={onSave} disabled={saving} activeOpacity={0.85}>
+        <TouchableOpacity style={{ flex: 1, borderRadius: 14, paddingVertical: 16, minHeight: 54, alignItems: "center", justifyContent: "center", backgroundColor: saving ? c.muted : c.primary }} onPress={onSave} disabled={saving} activeOpacity={0.85}>
           {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontWeight: "600" as const, color: "#fff", fontFamily: "Inter_600SemiBold" }}>{t.save}</Text>}
         </TouchableOpacity>
       </View>
     </View>
   );
 }
+
+const EditFieldRow = React.forwardRef<TextInput, any>(
+  ({ label, value, onChangeText, multiline, returnKeyType, onSubmitEditing, c }, ref) => (
+    <View style={{ marginBottom: 16 }}>
+      <Text style={{ fontSize: 13, color: c.mutedForeground, fontFamily: "Inter_500Medium", marginBottom: 7 }}>{label}</Text>
+      <TextInput
+        ref={ref}
+        style={{ borderWidth: 1.5, borderColor: c.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, fontFamily: "Inter_400Regular", backgroundColor: c.card, color: c.text, minHeight: 50, ...(multiline ? { height: 88, textAlignVertical: "top" as const, paddingTop: 12 } : {}) }}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={!!multiline}
+        returnKeyType={multiline ? "default" : (returnKeyType ?? "next")}
+        onSubmitEditing={!multiline ? onSubmitEditing : undefined}
+        blurOnSubmit={!onSubmitEditing || !!multiline}
+      />
+    </View>
+  ),
+);
 
 function PickerRow({ label, value, options, onSelect, c }: any) {
   const [open, setOpen] = useState(false);

@@ -34,6 +34,7 @@ export default function CompanyDashboard() {
   const [postForm, setPostFormState] = useState({ title: "", description: "", category: CATEGORIES[0], city: "", vacancies: "1" });
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState("");
+  const [postFieldErrors, setPostFieldErrors] = useState<Record<string, string>>({});
   const [postSuccess, setPostSuccess] = useState(false);
 
   // Requirements state
@@ -77,7 +78,12 @@ export default function CompanyDashboard() {
 
   async function handlePost() {
     if (!session.companyId) return;
-    setPosting(true); setPostError(""); setPostSuccess(false);
+    const errs: Record<string, string> = {};
+    if (!postForm.title.trim()) errs.title = t.fieldRequired;
+    if (!postForm.city.trim()) errs.city = t.fieldRequired;
+    if (Number(postForm.vacancies) < 1) errs.vacancies = t.fieldRequired;
+    if (Object.keys(errs).length > 0) { setPostFieldErrors(errs); return; }
+    setPosting(true); setPostError(""); setPostSuccess(false); setPostFieldErrors({});
     try {
       await api.postRequirement({ ...postForm, companyId: session.companyId as any, vacancies: Number(postForm.vacancies) });
       setPostSuccess(true);
@@ -116,9 +122,9 @@ export default function CompanyDashboard() {
       ) : (
         <>
           <View style={[styles.tabRow, { borderBottomColor: c.border }]}>
-            {([["search", t.searchWorkers], ["post", t.postRequirement], ["requirements", t.myRequirements]] as [Tab, string][]).map(([tb, label]) => (
+            {([["search", t.searchTab], ["post", t.postJob], ["requirements", t.myJobs]] as [Tab, string][]).map(([tb, label]) => (
               <TouchableOpacity key={tb} style={[styles.tab, tab === tb && { borderBottomColor: accent, borderBottomWidth: 2 }]} onPress={() => setTab(tb)}>
-                <Text style={[styles.tabText, { color: tab === tb ? accent : c.mutedForeground }]}>{label}</Text>
+                <Text style={[styles.tabText, { color: tab === tb ? accent : c.mutedForeground }]} numberOfLines={1}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -128,10 +134,11 @@ export default function CompanyDashboard() {
               <PickerInline label={t.filterCategory} value={filterCategory} options={["", ...CATEGORIES]} onSelect={setFilterCategory} c={c} accent={accent} placeholder={t.allCategories} />
               <View style={{ marginBottom: 14 }}>
                 <Text style={{ fontSize: 13, color: c.mutedForeground, fontFamily: "Inter_500Medium", marginBottom: 6 }}>{t.filterCity}</Text>
-                <TextInput style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontFamily: "Inter_400Regular", backgroundColor: c.card, color: c.text }}
-                  value={filterCity} onChangeText={setFilterCity} placeholder={t.filterCity} placeholderTextColor={c.mutedForeground} />
+                <TextInput style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, fontFamily: "Inter_400Regular", backgroundColor: c.card, color: c.text, minHeight: 50 }}
+                  value={filterCity} onChangeText={setFilterCity} placeholder={t.filterCity} placeholderTextColor={c.mutedForeground}
+                  returnKeyType="search" onSubmitEditing={handleSearch} />
               </View>
-              <TouchableOpacity style={{ borderRadius: 14, paddingVertical: 16, alignItems: "center", backgroundColor: searching ? c.muted : accent }} onPress={handleSearch} disabled={searching} activeOpacity={0.85}>
+              <TouchableOpacity style={{ borderRadius: 14, paddingVertical: 16, alignItems: "center", backgroundColor: searching ? c.muted : accent, minHeight: 54, justifyContent: "center" }} onPress={handleSearch} disabled={searching} activeOpacity={0.85}>
                 {searching ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontWeight: "600" as const, color: "#fff", fontFamily: "Inter_600SemiBold" }}>{t.search}</Text>}
               </TouchableOpacity>
               {searched && (
@@ -159,13 +166,13 @@ export default function CompanyDashboard() {
                   <Text style={{ color: c.destructive, fontFamily: "Inter_400Regular", fontSize: 14 }}>{postError}</Text>
                 </View>
               )}
-              <InlineField label={t.reqTitle} value={postForm.title} onChangeText={(v: string) => setPF("title", v)} c={c} />
+              <InlineField label={t.reqTitle} value={postForm.title} onChangeText={(v: string) => { setPF("title", v); setPostFieldErrors((e) => ({ ...e, title: "" })); }} c={c} error={postFieldErrors.title} />
               <InlineField label={t.reqDescription} value={postForm.description} onChangeText={(v: string) => setPF("description", v)} c={c} multiline />
               <PickerInline label={t.category} value={postForm.category} options={CATEGORIES} onSelect={(v: string) => setPF("category", v)} c={c} accent={accent} />
-              <InlineField label={t.reqCity} value={postForm.city} onChangeText={(v: string) => setPF("city", v)} c={c} />
+              <InlineField label={t.reqCity} value={postForm.city} onChangeText={(v: string) => { setPF("city", v); setPostFieldErrors((e) => ({ ...e, city: "" })); }} c={c} error={postFieldErrors.city} />
               <InlineField label={t.reqVacancies} value={postForm.vacancies} onChangeText={(v: string) => setPF("vacancies", v)} c={c} keyboardType="number-pad" />
-              <TouchableOpacity style={{ borderRadius: 14, paddingVertical: 16, alignItems: "center", backgroundColor: posting ? c.muted : accent, marginTop: 8 }} onPress={handlePost} disabled={posting} activeOpacity={0.85}>
-                {posting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontWeight: "600" as const, color: "#fff", fontFamily: "Inter_600SemiBold" }}>{t.post}</Text>}
+              <TouchableOpacity style={{ borderRadius: 14, paddingVertical: 16, alignItems: "center", backgroundColor: posting ? c.muted : accent, marginTop: 8, minHeight: 54, justifyContent: "center" }} onPress={handlePost} disabled={posting} activeOpacity={0.85}>
+                {posting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ fontSize: 15, fontWeight: "600" as const, color: "#fff", fontFamily: "Inter_600SemiBold" }}>{t.postJob}</Text>}
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -225,12 +232,14 @@ function ReqCard({ req, c }: any) {
   );
 }
 
-function InlineField({ label, value, onChangeText, c, multiline, keyboardType }: any) {
+function InlineField({ label, value, onChangeText, c, multiline, keyboardType, error }: any) {
   return (
-    <View style={{ marginBottom: 14 }}>
-      <Text style={{ fontSize: 13, color: c.mutedForeground, fontFamily: "Inter_500Medium", marginBottom: 6 }}>{label}</Text>
-      <TextInput style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontFamily: "Inter_400Regular", backgroundColor: c.card, color: c.text, ...(multiline ? { height: 80, textAlignVertical: "top" } : {}) }}
+    <View style={{ marginBottom: 16 }}>
+      <Text style={{ fontSize: 13, color: error ? c.destructive : c.mutedForeground, fontFamily: "Inter_500Medium", marginBottom: 7 }}>{label}</Text>
+      <TextInput
+        style={{ borderWidth: 1.5, borderColor: error ? c.destructive : c.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, fontFamily: "Inter_400Regular", backgroundColor: c.card, color: c.text, minHeight: 50, ...(multiline ? { height: 88, textAlignVertical: "top" as const, paddingTop: 12 } : {}) }}
         value={value} onChangeText={onChangeText} multiline={!!multiline} keyboardType={keyboardType || "default"} />
+      {!!error && <Text style={{ fontSize: 12, color: c.destructive, fontFamily: "Inter_400Regular", marginTop: 5 }}>{error}</Text>}
     </View>
   );
 }
