@@ -35,7 +35,7 @@ router.put("/admin/companies/:id/status", adminAuth, async (req, res) => {
     const company = await Company.findByIdAndUpdate(
       req.params["id"],
       { status },
-      { new: true },
+      { returnDocument: "after" },
     );
     if (!company) {
       res.status(404).json({ error: "Company not found" });

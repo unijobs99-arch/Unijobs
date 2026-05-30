@@ -50,10 +50,14 @@ router.get("/workers/:id", async (req, res) => {
 
 router.put("/workers/:id", async (req, res) => {
   try {
-    const worker = await Worker.findByIdAndUpdate(req.params["id"], req.body, {
-      new: true,
-      runValidators: true,
-    });
+    // Strip MongoDB/Mongoose internals that must not be set via update
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { _id, __v, createdAt, updatedAt, ...updateData } = req.body;
+    const worker = await Worker.findByIdAndUpdate(
+      req.params["id"],
+      updateData,
+      { returnDocument: "after", runValidators: true },
+    );
     if (!worker) {
       res.status(404).json({ error: "Worker not found" });
       return;
