@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "q5kCh_ds3m50qg7Q-9lDl"
+uri = "file://artifacts/uni-jobs-mobile/assets/images/icon.png"
+type = "image"
+title = "generated_image"

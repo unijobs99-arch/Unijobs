@@ -18,6 +18,24 @@ router.post("/companies/register", async (req, res) => {
   }
 });
 
+router.get("/companies/login", async (req, res) => {
+  try {
+    const email = req.query["email"] as string;
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+    const company = await Company.findOne({ email });
+    if (!company) {
+      res.status(404).json({ error: "No company found with this email" });
+      return;
+    }
+    res.json(company);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.get("/companies/:id", async (req, res) => {
   try {
     const company = await Company.findById(req.params["id"]);

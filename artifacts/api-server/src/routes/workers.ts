@@ -17,6 +17,24 @@ router.post("/workers/register", async (req, res) => {
   }
 });
 
+router.get("/workers/login", async (req, res) => {
+  try {
+    const phone = req.query["phone"] as string;
+    if (!phone) {
+      res.status(400).json({ error: "Phone is required" });
+      return;
+    }
+    const worker = await Worker.findOne({ phone });
+    if (!worker) {
+      res.status(404).json({ error: "No worker found with this phone number" });
+      return;
+    }
+    res.json(worker);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.get("/workers/:id", async (req, res) => {
   try {
     const worker = await Worker.findById(req.params["id"]);
