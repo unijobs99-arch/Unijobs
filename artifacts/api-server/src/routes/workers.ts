@@ -1,16 +1,22 @@
 import { Router } from "express";
 import Worker from "../models/Worker.js";
+import { WorkerRegisterSchema, UpdateWorkerSchema, AvailabilitySchema } from "../lib/validation.js";
 
 const router = Router();
 
 router.post("/workers/register", async (req, res) => {
   try {
-    const worker = new Worker(req.body);
+    const validated = WorkerRegisterSchema.parse(req.body);
+    const worker = new Worker(validated);
     await worker.save();
     res.status(201).json(worker);
   } catch (err: any) {
     if (err.code === 11000) {
       res.status(409).json({ error: "Phone or Aadhaar already registered" });
+      return;
+    }
+    if (err.name === "ZodError") {
+      res.status(400).json({ error: err.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ") });
       return;
     }
     res.status(400).json({ error: err.message });
@@ -52,10 +58,11 @@ router.put("/workers/:id", async (req, res) => {
   try {
     // Strip MongoDB/Mongoose internals that must not be set via update
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, __v, createdAt, updatedAt, ...updateData } = req.body;
+    const { _id, __v, createdAt, updatedAt, phone, aadhaar, availability, ...updateData } = req.body;
+    const validated = UpdateWorkerSchema.parse(updateData);
     const worker = await Worker.findByIdAndUpdate(
       req.params["id"],
-      updateData,
+      validated,
       { returnDocument: "after", runValidators: true },
     );
     if (!worker) {
@@ -64,6 +71,32 @@ router.put("/workers/:id", async (req, res) => {
     }
     res.json(worker);
   } catch (err: any) {
+    if (err.name === "ZodError") {
+      res.status(400).json({ error: err.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ") });
+      return;
+    }
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.put("/workers/:id/availability", async (req, res) => {
+  try {
+    const validated = AvailabilitySchema.parse(req.body);
+    const worker = await Worker.findByIdAndUpdate(
+      req.params["id"],
+      { availability: validated.availability },
+      { returnDocument: "after" },
+    );
+    if (!worker) {
+      res.status(404).json({ error: "Worker not found" });
+      return;
+    }
+    res.json(worker);
+  } catch (err: any) {
+    if (err.name === "ZodError") {
+      res.status(400).json({ error: err.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ") });
+      return;
+    }
     res.status(400).json({ error: err.message });
   }
 });

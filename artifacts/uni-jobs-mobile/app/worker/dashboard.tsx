@@ -27,6 +27,7 @@ export default function WorkerDashboard() {
   const [editForm, setEditForm] = useState<Partial<Worker>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [togglingAvailability, setTogglingAvailability] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!session.workerId) return;
@@ -49,6 +50,17 @@ export default function WorkerDashboard() {
       setWorker(updated); setEditing(false);
     } catch (e: any) { setError(e.message); }
     finally { setSaving(false); }
+  }
+
+  async function handleToggleAvailability() {
+    if (!session.workerId || !worker) return;
+    setTogglingAvailability(true);
+    try {
+      const newStatus = worker.availability === "available" ? "notAvailable" : "available";
+      const updated = await api.toggleWorkerAvailability(session.workerId, newStatus);
+      setWorker(updated);
+    } catch (e: any) { setError(e.message); }
+    finally { setTogglingAvailability(false); }
   }
 
   async function handleLogout() {
@@ -87,7 +99,7 @@ export default function WorkerDashboard() {
       {tab === "profile" ? (
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: botPad + 24 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}>
           {!editing ? (
-            <ProfileView worker={worker} onEdit={() => setEditing(true)} t={t} c={c} />
+            <ProfileView worker={worker} onEdit={() => setEditing(true)} onToggleAvailability={handleToggleAvailability} toggling={togglingAvailability} t={t} c={c} />
           ) : (
             <EditForm form={editForm} setField={setEF} onSave={handleSave} onCancel={() => setEditing(false)} saving={saving} t={t} c={c} />
           )}
@@ -106,11 +118,17 @@ export default function WorkerDashboard() {
   );
 }
 
-function ProfileView({ worker, onEdit, t, c }: any) {
+function ProfileView({ worker, onEdit, onToggleAvailability, toggling, t, c }: any) {
   if (!worker) return null;
+  
+  const maskAadhaar = (aadhaar: string) => {
+    if (!aadhaar || aadhaar.length < 4) return aadhaar;
+    return "*".repeat(aadhaar.length - 4) + aadhaar.slice(-4);
+  };
+  
   const rows = [
     { label: t.phone, value: worker.phone },
-    { label: t.aadhaar, value: worker.aadhaar },
+    { label: t.aadhaar, value: maskAadhaar(worker.aadhaar) },
     { label: t.uan, value: worker.uan },
     { label: t.city, value: worker.city },
     { label: t.education, value: worker.education },
@@ -127,6 +145,11 @@ function ProfileView({ worker, onEdit, t, c }: any) {
         <View style={[pStyles.badge, { backgroundColor: c.primaryLight }]}>
           <Text style={[pStyles.badgeText, { color: c.primary }]}>{worker.category}</Text>
         </View>
+        <View style={[pStyles.statusBadge, { backgroundColor: worker.availability === "available" ? "#DCFCE7" : "#FEE2E2" }]}>
+          <Text style={[pStyles.statusText, { color: worker.availability === "available" ? "#166534" : "#991B1B" }]}>
+            {worker.availability === "available" ? "Available" : "Not Available"}
+          </Text>
+        </View>
       </View>
       {rows.map((r) => (
         <View key={r.label} style={[pStyles.row, { borderBottomColor: c.border }]}>
@@ -134,10 +157,26 @@ function ProfileView({ worker, onEdit, t, c }: any) {
           <Text style={[pStyles.rowValue, { color: c.text }]}>{r.value}</Text>
         </View>
       ))}
-      <TouchableOpacity style={[pStyles.editBtn, { backgroundColor: c.primary }]} onPress={onEdit} activeOpacity={0.85}>
-        <Feather name="edit-2" size={16} color="#fff" />
-        <Text style={pStyles.editBtnText}>Edit Profile</Text>
-      </TouchableOpacity>
+      <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+        <TouchableOpacity style={[pStyles.editBtn, { backgroundColor: c.primary, flex: 1 }]} onPress={onEdit} activeOpacity={0.85}>
+          <Feather name="edit-2" size={16} color="#fff" />
+          <Text style={pStyles.editBtnText}>Edit Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[pStyles.toggleBtn, { backgroundColor: worker.availability === "available" ? "#DCFCE7" : "#FEE2E2", flex: 1 }]} 
+          onPress={onToggleAvailability}
+          disabled={toggling}
+          activeOpacity={0.85}>
+          {toggling ? <ActivityIndicator color={worker.availability === "available" ? "#166534" : "#991B1B"} size="small" /> : (
+            <>
+              <Feather name={worker.availability === "available" ? "check-circle" : "circle"} size={16} color={worker.availability === "available" ? "#166534" : "#991B1B"} />
+              <Text style={[pStyles.toggleBtnText, { color: worker.availability === "available" ? "#166534" : "#991B1B" }]}>
+                {worker.availability === "available" ? "Available" : "Unavailable"}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -270,11 +309,15 @@ const pStyles = StyleSheet.create({
   name: { fontSize: 20, fontWeight: "700" as const, fontFamily: "Inter_700Bold", marginBottom: 8 },
   badge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
   badgeText: { fontSize: 13, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, marginTop: 10 },
+  statusText: { fontSize: 12, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1 },
   rowLabel: { fontSize: 14, fontFamily: "Inter_400Regular" },
   rowValue: { fontSize: 14, fontFamily: "Inter_500Medium", flex: 1, textAlign: "right" },
-  editBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingVertical: 16, marginTop: 20 },
+  editBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingVertical: 16 },
   editBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
+  toggleBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingVertical: 16 },
+  toggleBtnText: { fontSize: 15, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
 });
 
 const rStyles = StyleSheet.create({

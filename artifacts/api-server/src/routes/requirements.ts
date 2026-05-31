@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Requirement from "../models/Requirement.js";
 import Company from "../models/Company.js";
+import { RequirementSchema } from "../lib/validation.js";
 
 const router = Router();
 
@@ -15,10 +16,15 @@ router.post("/requirements", async (req, res) => {
       res.status(403).json({ error: "Only approved companies can post requirements" });
       return;
     }
-    const requirement = new Requirement(req.body);
+    const validated = RequirementSchema.parse(req.body);
+    const requirement = new Requirement(validated);
     await requirement.save();
     res.status(201).json(requirement);
   } catch (err: any) {
+    if (err.name === "ZodError") {
+      res.status(400).json({ error: err.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ") });
+      return;
+    }
     res.status(400).json({ error: err.message });
   }
 });

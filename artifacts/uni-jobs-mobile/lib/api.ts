@@ -23,6 +23,7 @@ export interface Worker {
   education: string;
   experience: string;
   category: string;
+  availability: "available" | "notAvailable";
   createdAt: string;
 }
 
@@ -55,6 +56,12 @@ export const api = {
 
   updateWorker: (id: string, body: Partial<Worker>) =>
     req<Worker>(`/workers/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+
+  toggleWorkerAvailability: (id: string, availability: "available" | "notAvailable") =>
+    req<Worker>(`/workers/${id}/availability`, {
+      method: "PUT",
+      body: JSON.stringify({ availability }),
+    }),
 
   loginWorker: (phone: string) =>
     req<Worker>(`/workers/login?phone=${encodeURIComponent(phone)}`),

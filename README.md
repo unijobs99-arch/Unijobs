@@ -129,6 +129,13 @@ Backend requires:
 MONGODB_URI=
 ADMIN_SECRET=
 PORT=4001
+NODE_ENV=development
+```
+
+Mobile requires:
+
+```env
+EXPO_PUBLIC_DOMAIN=localhost:3000
 ```
 
 ## Local Development

@@ -40,4 +40,8 @@ const RequirementSchema = new Schema<IRequirement>(
   { timestamps: true },
 );
 
+RequirementSchema.index({ companyId: 1 });
+RequirementSchema.index({ city: 1, category: 1 });
+RequirementSchema.index({ createdAt: -1 });
+
 export default mongoose.model<IRequirement>("Requirement", RequirementSchema);

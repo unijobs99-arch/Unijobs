@@ -3,10 +3,24 @@ import { logger } from "./lib/logger.js";
 import { connectDB } from "./lib/db.js";
 
 const rawPort = process.env["PORT"];
+const mongoUri = process.env["MONGODB_URI"];
+const adminSecret = process.env["ADMIN_SECRET"];
 
 if (!rawPort) {
   throw new Error(
     "PORT environment variable is required but was not provided.",
+  );
+}
+
+if (!mongoUri) {
+  throw new Error(
+    "MONGODB_URI environment variable is required but was not provided.",
+  );
+}
+
+if (!adminSecret) {
+  throw new Error(
+    "ADMIN_SECRET environment variable is required but was not provided.",
   );
 }
 

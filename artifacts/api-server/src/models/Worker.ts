@@ -18,6 +18,7 @@ export interface IWorker extends Document {
     | "Warehouse Helper"
     | "Loader"
     | "Tagging";
+  availability: "available" | "notAvailable";
 }
 
 const WorkerSchema = new Schema<IWorker>(
@@ -44,8 +45,17 @@ const WorkerSchema = new Schema<IWorker>(
         "Tagging",
       ],
     },
+    availability: {
+      type: String,
+      enum: ["available", "notAvailable"],
+      default: "available",
+    },
   },
   { timestamps: true },
 );
+
+WorkerSchema.index({ city: 1, category: 1, availability: 1 });
+WorkerSchema.index({ phone: 1 });
+WorkerSchema.index({ aadhaar: 1 });
 
 export default mongoose.model<IWorker>("Worker", WorkerSchema);
