@@ -31,7 +31,9 @@ function RootLayoutNav() {
         <Stack.Screen name="worker/dashboard" />
         <Stack.Screen name="company/register" />
         <Stack.Screen name="company/dashboard" />
+        <Stack.Screen name="company/worker-details" />
         <Stack.Screen name="admin/index" />
+        <Stack.Screen name="hr/index" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </AppProvider>

@@ -10,14 +10,24 @@ export default function SplashScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  console.log("[app/index] Index rendered");
+  console.log("[app/index] sessionLoaded value", sessionLoaded);
+  console.log("[app/index] Current session role", session.role);
+
   useEffect(() => {
     if (!sessionLoaded) return;
     if (session.role === "worker" && session.workerId) {
-      router.replace("/worker/dashboard");
+      const target = "/worker/dashboard";
+      console.log("[app/index] Router navigation target", target);
+      router.replace(target);
     } else if (session.role === "company" && session.companyId) {
-      router.replace("/company/dashboard");
+      const target = "/company/dashboard";
+      console.log("[app/index] Router navigation target", target);
+      router.replace(target);
     } else if (session.role === "admin" && session.adminSecret) {
-      router.replace("/admin");
+      const target = "/admin";
+      console.log("[app/index] Router navigation target", target);
+      router.replace(target);
     }
   }, [sessionLoaded, session]);
 

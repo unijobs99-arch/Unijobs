@@ -1,14 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import colors from "@/constants/colors";
 import { api, type Requirement, type Worker } from "@/lib/api";
 import { CATEGORIES, EDUCATION } from "@/constants/strings";
-
-type Tab = "profile" | "requirements";
 
 export default function WorkerDashboard() {
   const { t, session, clearSession } = useApp();
@@ -18,9 +16,9 @@ export default function WorkerDashboard() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const [tab, setTab] = useState<Tab>("profile");
+  
   const [worker, setWorker] = useState<Worker | null>(null);
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -32,14 +30,20 @@ export default function WorkerDashboard() {
   const fetchData = useCallback(async () => {
     if (!session.workerId) return;
     try {
-      const [w, reqs] = await Promise.all([api.getWorker(session.workerId), api.getRequirements()]);
+      const w = await api.getWorker(session.workerId);
       setWorker(w);
       setEditForm(w);
-      setRequirements(reqs);
+      // also fetch company contacts for this worker
+      try {
+        const cts = await api.getWorkerContacts(session.workerId);
+        const sorted = Array.isArray(cts) ? cts.sort((a: any, b: any) => (b.createdAt || 0) > (a.createdAt || 0) ? 1 : -1) : cts;
+        setContacts(sorted);
+      } catch (ex) {
+        console.warn("Failed to load contacts", ex);
+      }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); setRefreshing(false); }
   }, [session.workerId]);
-
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function handleSave() {
@@ -80,40 +84,28 @@ export default function WorkerDashboard() {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.tabRow, { borderBottomColor: c.border }]}>
-        {(["profile", "requirements"] as Tab[]).map((tb) => (
-          <TouchableOpacity key={tb} style={[styles.tab, tab === tb && { borderBottomColor: c.primary, borderBottomWidth: 2 }]} onPress={() => setTab(tb)}>
-            <Text style={[styles.tabText, { color: tab === tb ? c.primary : c.mutedForeground }]}>
-              {tb === "profile" ? t.myProfile : t.requirements}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {!!error && (
         <View style={{ margin: 16, padding: 12, backgroundColor: "#FEE2E2", borderRadius: 10, borderWidth: 1, borderColor: "#FCA5A5" }}>
           <Text style={{ color: c.destructive, fontSize: 14 }}>{error}</Text>
         </View>
       )}
-
-      {tab === "profile" ? (
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: botPad + 24 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}>
-          {!editing ? (
-            <ProfileView worker={worker} onEdit={() => setEditing(true)} onToggleAvailability={handleToggleAvailability} toggling={togglingAvailability} t={t} c={c} />
-          ) : (
-            <EditForm form={editForm} setField={setEF} onSave={handleSave} onCancel={() => setEditing(false)} saving={saving} t={t} c={c} />
-          )}
-        </ScrollView>
-      ) : (
-        <FlatList
-          data={requirements}
-          keyExtractor={(i) => i._id}
-          contentContainerStyle={{ padding: 16, paddingBottom: botPad + 24, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}
-          ListEmptyComponent={<EmptyState label={t.noRequirements} c={c} />}
-          renderItem={({ item }) => <RequirementCard req={item} c={c} />}
-        />
-      )}
+      <FlatList
+        data={contacts}
+        keyExtractor={(i) => i._id}
+        contentContainerStyle={{ padding: 16, paddingBottom: botPad + 24, gap: 12 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}
+        ListHeaderComponent={() => (
+          <View style={{ paddingBottom: 12 }}>
+            {!editing ? (
+              <ProfileView worker={worker} onEdit={() => setEditing(true)} onToggleAvailability={handleToggleAvailability} toggling={togglingAvailability} t={t} c={c} />
+            ) : (
+              <EditForm form={editForm} setField={setEF} onSave={handleSave} onCancel={() => setEditing(false)} saving={saving} t={t} c={c} />
+            )}
+          </View>
+        )}
+        ListEmptyComponent={<EmptyState label={"No companies have contacted you yet."} c={c} />}
+        renderItem={({ item }) => <ContactCard contact={item} c={c} />}
+      />
     </View>
   );
 }
@@ -272,6 +264,47 @@ function RequirementCard({ req, c }: any) {
       <Text style={[rStyles.company, { color: c.mutedForeground }]}>{co?.companyName || "Company"} · {req.city}</Text>
       {!!req.description && <Text style={[rStyles.desc, { color: c.mutedForeground }]}>{req.description}</Text>}
       <Text style={[rStyles.vacancies, { color: c.success }]}>{req.vacancies} vacancies</Text>
+    </View>
+  );
+}
+
+function ContactCard({ contact, c }: any) {
+  const normalizeWhatsAppNumber = (phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 10) return `91${digits}`;
+    if (digits.length === 12 && digits.startsWith("91")) return digits;
+    return digits;
+  };
+
+  const handleCall = () => {
+    if (!contact.phone) return;
+    Linking.openURL(`tel:${contact.phone}`);
+  };
+
+  const handleWhatsApp = () => {
+    if (!contact.phone) return;
+    const msg = `Hello ${contact.companyName}, I'm responding to your message.`;
+    Linking.openURL(`https://wa.me/${normalizeWhatsAppNumber(contact.phone)}?text=${encodeURIComponent(msg)}`);
+  };
+
+  return (
+    <View style={[rStyles.card, { backgroundColor: c.card, borderColor: c.border }]}> 
+      <View style={rStyles.topRow}>
+        <Text style={[rStyles.title, { color: c.text }]}>{contact.companyName || "Company"}</Text>
+        <View style={[rStyles.badge, { backgroundColor: c.primaryLight }]}>
+          <Text style={[rStyles.badgeText, { color: c.primary }]}>{contact.job || ""}</Text>
+        </View>
+      </View>
+      <Text style={[rStyles.company, { color: c.mutedForeground }]}>{contact.location || ""}</Text>
+      <Text style={[rStyles.desc, { color: c.mutedForeground }]}>{contact.phone || ""}</Text>
+      <View style={{ flexDirection: "row", gap: 12, marginTop: 10 }}>
+        <TouchableOpacity style={{ flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", backgroundColor: "#065F46" }} onPress={handleCall} activeOpacity={0.85}>
+          <Text style={{ color: "#fff", fontWeight: "600" }}>Call Company</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{ flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", backgroundColor: "#25D366" }} onPress={handleWhatsApp} activeOpacity={0.85}>
+          <Text style={{ color: "#fff", fontWeight: "600" }}>WhatsApp Company</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }

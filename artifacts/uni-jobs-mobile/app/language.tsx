@@ -20,11 +20,22 @@ export default function LanguageScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: c.background, paddingTop: topPad, paddingBottom: botPad + 16 }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text }]}>{t.selectLanguage}</Text>
+    <View style={[styles.container, { backgroundColor: c.background, paddingTop: topPad, paddingBottom: botPad + 24 }]}>
+      {/* Logo area */}
+      <View style={styles.logoArea}>
+        <View style={[styles.logoBg, { backgroundColor: c.primaryLight }]}>
+          <Text style={[styles.logoText, { color: c.primary }]}>UJ</Text>
+        </View>
       </View>
-      <View style={styles.buttons}>
+
+      {/* Content area */}
+      <View style={styles.contentArea}>
+        <Text style={[styles.appName, { color: c.text }]}>UniJobs</Text>
+        <Text style={[styles.subtitle, { color: c.mutedForeground }]}>{t.selectLanguage}</Text>
+      </View>
+
+      {/* Language buttons */}
+      <View style={styles.buttonsContainer}>
         <TouchableOpacity style={[styles.langBtn, { backgroundColor: c.primary }]} onPress={() => pick("en")} activeOpacity={0.85}>
           <Text style={[styles.langText, { color: c.primaryForeground }]}>English</Text>
         </TouchableOpacity>
@@ -37,10 +48,14 @@ export default function LanguageScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 24 },
-  header: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 26, fontWeight: "700" as const, fontFamily: "Inter_700Bold", textAlign: "center" },
-  buttons: { gap: 14, paddingBottom: 8 },
-  langBtn: { borderRadius: 14, paddingVertical: 20, alignItems: "center" },
-  langText: { fontSize: 20, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
+  container: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between" },
+  logoArea: { paddingTop: 20, alignItems: "center" },
+  logoBg: { width: 80, height: 80, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  logoText: { fontSize: 36, fontWeight: "700" as const, fontFamily: "Inter_700Bold" },
+  contentArea: { alignItems: "center", paddingVertical: 16 },
+  appName: { fontSize: 32, fontWeight: "700" as const, fontFamily: "Inter_700Bold", textAlign: "center" },
+  subtitle: { fontSize: 16, fontFamily: "Inter_400Regular", marginTop: 8, textAlign: "center" },
+  buttonsContainer: { gap: 12, paddingBottom: 16 },
+  langBtn: { borderRadius: 14, paddingVertical: 18, alignItems: "center" },
+  langText: { fontSize: 18, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
 });

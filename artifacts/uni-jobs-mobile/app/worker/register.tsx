@@ -14,6 +14,45 @@ import { CATEGORIES, EDUCATION } from "@/constants/strings";
 type Tab = "register" | "login";
 type FieldErrors = Record<string, string>;
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
 function validateRegister(form: typeof EMPTY_FORM, t: any): FieldErrors {
   const e: FieldErrors = {};
   if (!form.name.trim()) e.name = t.fieldRequired;
@@ -22,14 +61,16 @@ function validateRegister(form: typeof EMPTY_FORM, t: any): FieldErrors {
   if (!/^\d{12}$/.test(form.aadhaar)) e.aadhaar = t.invalidAadhaar;
   if (!form.uan.trim()) e.uan = t.fieldRequired;
   if (!form.address.trim()) e.address = t.fieldRequired;
+  if (!form.state.trim()) e.state = t.fieldRequired;
   if (!form.city.trim()) e.city = t.fieldRequired;
+  if (!form.area.trim()) e.area = t.fieldRequired;
   if (!form.experience.trim()) e.experience = t.fieldRequired;
   return e;
 }
 
 const EMPTY_FORM = {
   name: "", fatherName: "", phone: "", aadhaar: "", uan: "",
-  address: "", city: "", education: EDUCATION[1], experience: "", category: CATEGORIES[0],
+  address: "", state: INDIAN_STATES[0], city: "", area: "", education: EDUCATION[1], experience: "", category: CATEGORIES[0],
 };
 
 export default function WorkerRegisterScreen() {
@@ -53,7 +94,9 @@ export default function WorkerRegisterScreen() {
   const phoneRef = useRef<TextInput>(null);
   const aadhaarRef = useRef<TextInput>(null);
   const uanRef = useRef<TextInput>(null);
+  const stateRef = useRef<TextInput>(null);
   const cityRef = useRef<TextInput>(null);
+  const areaRef = useRef<TextInput>(null);
   const experienceRef = useRef<TextInput>(null);
 
   function setField(k: string, v: string) {
@@ -212,14 +255,31 @@ export default function WorkerRegisterScreen() {
               error={fieldErrors.address}
               c={c}
             />
+            <PickerField
+              label="State"
+              value={form.state}
+              options={INDIAN_STATES}
+              onSelect={(v: string) => setField("state", v)}
+              c={c}
+            />
             <Field
               ref={cityRef}
               label={t.city}
               value={form.city}
               onChangeText={(v: string) => setField("city", v)}
               returnKeyType="next"
-              onSubmitEditing={() => experienceRef.current?.focus()}
+              onSubmitEditing={() => areaRef.current?.focus()}
               error={fieldErrors.city}
+              c={c}
+            />
+            <Field
+              ref={areaRef}
+              label="Area"
+              value={form.area}
+              onChangeText={(v: string) => setField("area", v)}
+              returnKeyType="next"
+              onSubmitEditing={() => experienceRef.current?.focus()}
+              error={fieldErrors.area}
               c={c}
             />
             <PickerField
