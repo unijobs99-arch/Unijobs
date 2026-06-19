@@ -2,20 +2,12 @@ import { Router } from "express";
 import Requirement from "../models/Requirement.js";
 import Company from "../models/Company.js";
 import { RequirementSchema } from "../lib/validation.js";
+import ensureCompanyApproved from "../middleware/companyApproval.js";
 
 const router = Router();
 
-router.post("/requirements", async (req, res) => {
+router.post("/requirements", ensureCompanyApproved, async (req, res) => {
   try {
-    const company = await Company.findById(req.body.companyId);
-    if (!company) {
-      res.status(404).json({ error: "Company not found" });
-      return;
-    }
-    if (company.status !== "approved") {
-      res.status(403).json({ error: "Only approved companies can post requirements" });
-      return;
-    }
     const validated = RequirementSchema.parse(req.body);
     const requirement = new Requirement(validated);
     await requirement.save();
@@ -40,7 +32,7 @@ router.get("/requirements", async (_req, res) => {
   }
 });
 
-router.get("/requirements/company/:id", async (req, res) => {
+router.get("/requirements/company/:id", ensureCompanyApproved, async (req, res) => {
   try {
     const requirements = await Requirement.find({
       companyId: req.params["id"],

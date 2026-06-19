@@ -7,7 +7,9 @@ export interface IWorker extends Document {
   aadhaar: string;
   uan: string;
   address: string;
+  state: string;
   city: string;
+  area: string;
   education: string;
   experience: string;
   category:
@@ -19,6 +21,10 @@ export interface IWorker extends Document {
     | "Loader"
     | "Tagging";
   availability: "available" | "notAvailable";
+  // Employment status tracking (optional)
+  employmentStatus?: "available" | "working";
+  currentCompanyId?: string | null;
+  currentCompanyName?: string | null;
 }
 
 const WorkerSchema = new Schema<IWorker>(
@@ -29,7 +35,9 @@ const WorkerSchema = new Schema<IWorker>(
     aadhaar: { type: String, required: true, unique: true },
     uan: { type: String, required: true },
     address: { type: String, required: true },
+    state: { type: String, required: true },
     city: { type: String, required: true },
+    area: { type: String, required: true },
     education: { type: String, required: true },
     experience: { type: String, required: true },
     category: {
@@ -49,6 +57,21 @@ const WorkerSchema = new Schema<IWorker>(
       type: String,
       enum: ["available", "notAvailable"],
       default: "available",
+    },
+    // Track whether a worker is currently employed by a company
+    employmentStatus: {
+      type: String,
+      enum: ["available", "working"],
+      default: "available",
+    },
+    // If employed, optionally reference the company (stored as string id)
+    currentCompanyId: {
+      type: String,
+      default: null,
+    },
+    currentCompanyName: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true },

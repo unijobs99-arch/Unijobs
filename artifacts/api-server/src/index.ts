@@ -1,6 +1,14 @@
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { connectDB } from "./lib/db.js";
+
+// Load .env from project root for local development
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, "../../..");
+dotenv.config({ path: path.resolve(projectRoot, ".env") });
 
 const rawPort = process.env["PORT"];
 const mongoUri = process.env["MONGODB_URI"];

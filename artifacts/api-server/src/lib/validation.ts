@@ -7,7 +7,9 @@ export const WorkerRegisterSchema = z.object({
   aadhaar: z.string().regex(/^\d{12}$/, "Aadhaar must be 12 digits"),
   uan: z.string().min(1, "UAN is required"),
   address: z.string().min(1, "Address is required").min(3, "Address must be at least 3 characters"),
+  state: z.string().min(1, "State is required"),
   city: z.string().min(1, "City is required"),
+  area: z.string().min(1, "Area is required"),
   education: z.string().min(1, "Education is required"),
   experience: z.string().min(1, "Experience is required"),
   category: z.enum([
@@ -49,7 +51,9 @@ export const UpdateWorkerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   fatherName: z.string().min(2, "Father's name must be at least 2 characters").optional(),
   address: z.string().min(3, "Address must be at least 3 characters").optional(),
+  state: z.string().min(1, "State is required").optional(),
   city: z.string().min(1, "City is required").optional(),
+  area: z.string().min(1, "Area is required").optional(),
   education: z.string().min(1, "Education is required").optional(),
   experience: z.string().min(1, "Experience is required").optional(),
   category: z.enum([
@@ -62,6 +66,12 @@ export const UpdateWorkerSchema = z.object({
     "Tagging",
   ]).optional(),
 }).strict().readonly();
+
+export const EmploymentUpdateSchema = z.object({
+  employmentStatus: z.enum(["available", "working"]),
+  companyId: z.string().nullable(),
+  companyName: z.string().nullable(),
+});
 
 export const AvailabilitySchema = z.object({
   availability: z.enum(["available", "notAvailable"]),
