@@ -1,6 +1,5 @@
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import mongoSanitize from "express-mongo-sanitize";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -40,17 +39,14 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(mongoSanitize());
 
 app.use("/api", router);
 
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error({ err, url: req.url, method: req.method }, "Unhandled error");
-
   if (res.headersSent) {
     return next(err);
   }
-
   res.status(500).json({ error: "Internal server error" });
 });
 

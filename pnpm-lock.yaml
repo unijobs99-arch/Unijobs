@@ -145,6 +145,9 @@ importers:
       express-rate-limit:
         specifier: ^8.5.2
         version: 8.5.2(express@5.2.1)
+      helmet:
+        specifier: ^8.2.0
+        version: 8.2.0
       mongoose:
         specifier: ^9.6.3
         version: 9.6.3
