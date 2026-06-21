@@ -1,7 +1,9 @@
 import { Router } from "express";
 import Worker from "../models/Worker.js";
 import CompanyContact from "../models/CompanyContact.js";
-import { WorkerRegisterSchema, UpdateWorkerSchema, AvailabilitySchema, EmploymentUpdateSchema } from "../lib/validation.js";import ensureCompanyApproved from "../middleware/companyApproval.js";import { logger } from "../lib/logger.js";
+import { WorkerRegisterSchema, UpdateWorkerSchema, AvailabilitySchema, EmploymentUpdateSchema, WorkerLoginSchema } from "../lib/validation.js";
+import ensureCompanyApproved from "../middleware/companyApproval.js";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
 
@@ -32,13 +34,9 @@ router.post("/workers/register", async (req, res) => {
   }
 });
 
-router.get("/workers/login", async (req, res) => {
+router.post("/workers/login", async (req, res) => {
   try {
-    const phone = req.query["phone"] as string;
-    if (!phone) {
-      res.status(400).json({ error: "Phone is required" });
-      return;
-    }
+    const { phone } = WorkerLoginSchema.parse(req.body);
     const worker = await Worker.findOne({ phone });
     if (!worker) {
       res.status(404).json({ error: "No worker found with this phone number" });
@@ -46,6 +44,10 @@ router.get("/workers/login", async (req, res) => {
     }
     res.json(worker);
   } catch (err: any) {
+    if (err.name === "ZodError") {
+      res.status(400).json({ error: err.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join("; ") });
+      return;
+    }
     res.status(400).json({ error: err.message });
   }
 });
@@ -76,7 +78,6 @@ router.get("/workers/company/:companyId", ensureCompanyApproved, async (req, res
   }
 });
 
-// Get contact records for a worker (new CompanyContact entries)
 router.get("/workers/:id/contacts", async (req, res) => {
   try {
     const workerId = req.params["id"];
@@ -89,8 +90,6 @@ router.get("/workers/:id/contacts", async (req, res) => {
 
 router.put("/workers/:id", async (req, res) => {
   try {
-    // Strip MongoDB/Mongoose internals that must not be set via update
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { _id, __v, createdAt, updatedAt, phone, aadhaar, availability, ...updateData } = req.body;
     const validated = UpdateWorkerSchema.parse(updateData);
     const worker = await Worker.findByIdAndUpdate(

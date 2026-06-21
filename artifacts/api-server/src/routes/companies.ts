@@ -1,4 +1,5 @@
 import { Router } from "express";
+import bcrypt from "bcrypt";
 import Company from "../models/Company.js";
 import Worker from "../models/Worker.js";
 import CompanyContact from "../models/CompanyContact.js";
@@ -10,9 +11,11 @@ const router = Router();
 router.post("/companies/register", async (req, res) => {
   try {
     const validated = CompanyRegisterSchema.parse(req.body);
-    const company = new Company(validated);
+    const hashedPassword = await bcrypt.hash(validated.password, 10);
+    const company = new Company({ ...validated, password: hashedPassword });
     await company.save();
-    res.status(201).json(company);
+    const { password: _, ...companyData } = company.toObject();
+    res.status(201).json(companyData);
   } catch (err: any) {
     if (err.code === 11000) {
       const field = Object.keys(err.keyPattern)[0];
@@ -33,11 +36,11 @@ router.post("/companies/register", async (req, res) => {
   }
 });
 
-router.get("/companies/login", async (req, res) => {
+router.post("/companies/login", async (req, res) => {
   try {
-    const email = req.query["email"] as string;
-    if (!email) {
-      res.status(400).json({ error: "Email is required" });
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ error: "Email and password are required" });
       return;
     }
     const company = await Company.findOne({ email });
@@ -45,9 +48,13 @@ router.get("/companies/login", async (req, res) => {
       res.status(404).json({ error: "No company found with this email" });
       return;
     }
-    console.log("[LOGIN ENDPOINT] Company fetched from MongoDB:", { companyId: company._id, status: company.status, email: company.email });
-    console.log("[LOGIN ENDPOINT] Sending response to client:", JSON.stringify(company));
-    res.json(company);
+    const passwordMatch = await bcrypt.compare(password, company.password);
+    if (!passwordMatch) {
+      res.status(401).json({ error: "Invalid password" });
+      return;
+    }
+    const { password: _, ...companyData } = company.toObject();
+    res.json(companyData);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -55,14 +62,11 @@ router.get("/companies/login", async (req, res) => {
 
 router.get("/companies/:id", ensureCompanyApproved, async (req, res) => {
   try {
-    // Ensure we send the latest company; approval middleware will enforce status
-    const company = await Company.findById(req.params["id"]);
+    const company = await Company.findById(req.params["id"]).select("-password");
     if (!company) {
       res.status(404).json({ error: "Company not found" });
       return;
     }
-    console.log("[GET COMPANY ENDPOINT] Company fetched from MongoDB:", { companyId: company._id, status: company.status });
-    console.log("[GET COMPANY ENDPOINT] Sending response to client:", JSON.stringify(company));
     res.json(company);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -83,35 +87,30 @@ router.get("/companies/:id/workers", ensureCompanyApproved, async (req, res) => 
   }
 });
 
-// Record that a company contacted a worker. Prevent duplicate entries within a short window.
 router.post("/companies/:companyId/contact/:workerId", ensureCompanyApproved, async (req, res) => {
   try {
     const { companyId, workerId } = req.params as any;
     const { job = "", location = "" } = req.body || {};
 
-    // Ensure worker exists
     const worker = await Worker.findById(workerId);
     if (!worker) {
       res.status(404).json({ error: "Worker not found" });
       return;
     }
 
-    // Company object is attached by approval middleware
     const company = (req as any).company as any;
     if (!company) {
       res.status(400).json({ error: "Company information unavailable" });
       return;
     }
 
-    // Reuse existing contact record for the same worker/company pair.
-    // If found, update its fields and touch the updatedAt timestamp; otherwise create new.
     const existing = await CompanyContact.findOne({ workerId, companyId });
     if (existing) {
       existing.companyName = company.companyName || existing.companyName;
       existing.job = job || existing.job;
       existing.location = location || existing.location;
       existing.phone = company.phone || existing.phone;
-      await existing.save(); // updates updatedAt
+      await existing.save();
       res.json(existing);
       return;
     }

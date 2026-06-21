@@ -15,12 +15,13 @@ type FieldErrors = Record<string, string>;
 
 const ACCENT = "#065F46";
 
-function validateRegister(form: { companyName: string; ownerName: string; email: string; phone: string }, t: any): FieldErrors {
+function validateRegister(form: { companyName: string; ownerName: string; email: string; phone: string; password: string }, t: any): FieldErrors {
   const e: FieldErrors = {};
   if (!form.companyName.trim()) e.companyName = t.fieldRequired;
   if (!form.ownerName.trim()) e.ownerName = t.fieldRequired;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = t.invalidEmail;
   if (!form.phone.trim()) e.phone = t.fieldRequired;
+  if (!form.password || form.password.length < 6) e.password = "Password must be at least 6 characters";
   return e;
 }
 
@@ -37,13 +38,17 @@ export default function CompanyRegisterScreen() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
-  const [form, setFormState] = useState({ companyName: "", ownerName: "", email: "", phone: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [form, setFormState] = useState({ companyName: "", ownerName: "", email: "", phone: "", password: "" });
 
-  // Keyboard focus refs
   const ownerRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const loginPasswordRef = useRef<TextInput>(null);
 
   function setField(k: string, v: string) {
     setFormState((f) => ({ ...f, [k]: v }));
@@ -71,9 +76,13 @@ export default function CompanyRegisterScreen() {
       setLoginError(t.invalidEmail);
       return;
     }
+    if (!loginPassword || loginPassword.length < 6) {
+      setLoginError("Password must be at least 6 characters");
+      return;
+    }
     setLoginError(""); setLoading(true);
     try {
-      const co = await api.loginCompany(loginEmail);
+      const co = await api.loginCompany(loginEmail, loginPassword);
       await setSession({ role: "company", companyId: co._id });
       router.replace("/company/dashboard");
     } catch (e: any) {
@@ -121,6 +130,17 @@ export default function CompanyRegisterScreen() {
               onChangeText={(v: string) => { setLoginEmail(v); setLoginError(""); }}
               keyboardType="email-address"
               placeholder="registered@company.com"
+              returnKeyType="next"
+              onSubmitEditing={() => loginPasswordRef.current?.focus()}
+              c={c}
+            />
+            <PasswordField
+              ref={loginPasswordRef}
+              label="Password"
+              value={loginPassword}
+              onChangeText={(v: string) => { setLoginPassword(v); setLoginError(""); }}
+              show={showLoginPassword}
+              onToggle={() => setShowLoginPassword(!showLoginPassword)}
               returnKeyType="done"
               onSubmitEditing={handleLogin}
               error={loginError}
@@ -177,9 +197,21 @@ export default function CompanyRegisterScreen() {
               keyboardType="phone-pad"
               placeholder="10-digit mobile number"
               maxLength={10}
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              error={fieldErrors.phone}
+              c={c}
+            />
+            <PasswordField
+              ref={passwordRef}
+              label="Password"
+              value={form.password}
+              onChangeText={(v: string) => setField("password", v)}
+              show={showPassword}
+              onToggle={() => setShowPassword(!showPassword)}
               returnKeyType="done"
               onSubmitEditing={handleRegister}
-              error={fieldErrors.phone}
+              error={fieldErrors.password}
               c={c}
             />
             <ActionButton
@@ -256,6 +288,42 @@ const CField = React.forwardRef<TextInput, CFieldProps>(
         blurOnSubmit={!onSubmitEditing}
         autoFocus={!!autoFocus}
       />
+      {!!error && (
+        <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: c.destructive, marginTop: 5 }}>
+          {error}
+        </Text>
+      )}
+    </View>
+  ),
+);
+
+const PasswordField = React.forwardRef<TextInput, any>(
+  ({ label, value, onChangeText, show, onToggle, returnKeyType, onSubmitEditing, error, c }, ref) => (
+    <View style={{ marginBottom: 16 }}>
+      <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: error ? c.destructive : c.mutedForeground, marginBottom: 7 }}>
+        {label}
+      </Text>
+      <View style={{
+        flexDirection: "row", alignItems: "center",
+        borderWidth: 1.5, borderColor: error ? c.destructive : c.border,
+        borderRadius: 10, backgroundColor: c.card, minHeight: 50,
+      }}>
+        <TextInput
+          ref={ref}
+          style={{ flex: 1, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, fontFamily: "Inter_400Regular", color: c.text }}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={!show}
+          placeholder="Min. 6 characters"
+          placeholderTextColor={c.mutedForeground}
+          autoCapitalize="none"
+          returnKeyType={returnKeyType ?? "done"}
+          onSubmitEditing={onSubmitEditing}
+        />
+        <TouchableOpacity onPress={onToggle} style={{ paddingHorizontal: 14 }} hitSlop={8}>
+          <Feather name={show ? "eye-off" : "eye"} size={18} color={c.mutedForeground} />
+        </TouchableOpacity>
+      </View>
       {!!error && (
         <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: c.destructive, marginTop: 5 }}>
           {error}

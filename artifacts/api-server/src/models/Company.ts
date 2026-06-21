@@ -5,6 +5,7 @@ export interface ICompany extends Document {
   ownerName: string;
   email: string;
   phone: string;
+  password: string;
   status: "pending" | "approved" | "rejected";
 }
 
@@ -14,6 +15,7 @@ const CompanySchema = new Schema<ICompany>(
     ownerName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],

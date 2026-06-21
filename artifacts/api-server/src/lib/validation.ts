@@ -23,11 +23,16 @@ export const WorkerRegisterSchema = z.object({
   ]),
 });
 
+export const WorkerLoginSchema = z.object({
+  phone: z.string().regex(/^\d{10}$/, "Phone must be 10 digits"),
+});
+
 export const CompanyRegisterSchema = z.object({
   companyName: z.string().min(1, "Company name is required").min(2, "Company name must be at least 2 characters"),
   ownerName: z.string().min(1, "Owner name is required").min(2, "Owner name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(1, "Phone is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export const RequirementSchema = z.object({
@@ -78,6 +83,7 @@ export const AvailabilitySchema = z.object({
 });
 
 export type WorkerRegister = z.infer<typeof WorkerRegisterSchema>;
+export type WorkerLogin = z.infer<typeof WorkerLoginSchema>;
 export type CompanyRegister = z.infer<typeof CompanyRegisterSchema>;
 export type Requirement = z.infer<typeof RequirementSchema>;
 export type UpdateWorker = z.infer<typeof UpdateWorkerSchema>;
