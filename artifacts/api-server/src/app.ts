@@ -1,3 +1,6 @@
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import mongoSanitize from "express-mongo-sanitize";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -6,6 +9,12 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+app.use(helmet());
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: "Too many requests, please try again later." },
+}));
 app.use(
   pinoHttp({
     logger,
@@ -25,9 +34,13 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({
+  origin: process.env["ALLOWED_ORIGIN"] || "*",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(mongoSanitize());
 
 app.use("/api", router);
 
