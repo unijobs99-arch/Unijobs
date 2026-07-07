@@ -80,8 +80,17 @@ router.get("/companies/:id/workers", ensureCompanyApproved, async (req, res) => 
     if (req.query["state"]) filter["state"] = req.query["state"] as string;
     if (req.query["city"]) filter["city"] = req.query["city"] as string;
     if (req.query["area"]) filter["area"] = req.query["area"] as string;
-    const workers = await Worker.find(filter);
-    res.json(workers);
+
+    const page = Math.max(1, parseInt(req.query["page"] as string, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query["limit"] as string, 10) || 20);
+    const skip = (page - 1) * limit;
+
+    const [workers, total] = await Promise.all([
+      Worker.find(filter).select("-aadhaar").skip(skip).limit(limit),
+      Worker.countDocuments(filter),
+    ]);
+
+    res.json({ workers, page, limit, total });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

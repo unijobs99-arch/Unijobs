@@ -13,14 +13,14 @@ import { api } from "@/lib/api";
 type Tab = "register" | "login";
 type FieldErrors = Record<string, string>;
 
-const ACCENT = "#065F46";
-
-function validateRegister(form: { companyName: string; ownerName: string; email: string; phone: string; password: string }, t: any): FieldErrors {
+function validateRegister(form: { companyName: string; ownerName: string; email: string; phone: string; city: string; domain: string; password: string }, t: any): FieldErrors {
   const e: FieldErrors = {};
   if (!form.companyName.trim()) e.companyName = t.fieldRequired;
   if (!form.ownerName.trim()) e.ownerName = t.fieldRequired;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = t.invalidEmail;
   if (!form.phone.trim()) e.phone = t.fieldRequired;
+  if (!form.city.trim()) e.city = t.fieldRequired;
+  if (!form.domain.trim()) e.domain = t.fieldRequired;
   if (!form.password || form.password.length < 6) e.password = "Password must be at least 6 characters";
   return e;
 }
@@ -42,13 +42,18 @@ export default function CompanyRegisterScreen() {
   const [loginError, setLoginError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [form, setFormState] = useState({ companyName: "", ownerName: "", email: "", phone: "", password: "" });
+  const [form, setFormState] = useState({ companyName: "", ownerName: "", email: "", phone: "", city: "", domain: "", password: "" });
 
   const ownerRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
+  const cityRef = useRef<TextInput>(null);
+  const domainRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const loginPasswordRef = useRef<TextInput>(null);
+
+  const headerBg = c.primary; // Dark navy #0F172A
+  const accentColor = c.accent; // Purple #7C3AED
 
   function setField(k: string, v: string) {
     setFormState((f) => ({ ...f, [k]: v }));
@@ -92,7 +97,7 @@ export default function CompanyRegisterScreen() {
 
   return (
     <View style={[styles.outer, { backgroundColor: c.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: ACCENT }]}>
+      <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: headerBg }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={16} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
@@ -103,10 +108,10 @@ export default function CompanyRegisterScreen() {
         {(["register", "login"] as Tab[]).map((tb) => (
           <TouchableOpacity
             key={tb}
-            style={[styles.tab, tab === tb && { borderBottomColor: ACCENT, borderBottomWidth: 2 }]}
+            style={[styles.tab, tab === tb && { borderBottomColor: accentColor, borderBottomWidth: 2 }]}
             onPress={() => { setTab(tb); setError(""); setFieldErrors({}); setLoginError(""); }}
           >
-            <Text style={[styles.tabText, { color: tab === tb ? ACCENT : c.mutedForeground }]}>
+            <Text style={[styles.tabText, { color: tab === tb ? accentColor : c.mutedForeground }]}>
               {tb === "register" ? t.register : t.loginByEmail}
             </Text>
           </TouchableOpacity>
@@ -150,7 +155,7 @@ export default function CompanyRegisterScreen() {
               label={loading ? t.loading : t.find}
               onPress={handleLogin}
               disabled={loading}
-              accent={ACCENT}
+              accent={accentColor}
               c={c}
             />
           </View>
@@ -198,8 +203,30 @@ export default function CompanyRegisterScreen() {
               placeholder="10-digit mobile number"
               maxLength={10}
               returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
+              onSubmitEditing={() => cityRef.current?.focus()}
               error={fieldErrors.phone}
+              c={c}
+            />
+            <CField
+              ref={cityRef}
+              label={t.city || "City"}
+              value={form.city}
+              onChangeText={(v: string) => setField("city", v)}
+              placeholder="e.g. Delhi, Mumbai, Bengaluru"
+              returnKeyType="next"
+              onSubmitEditing={() => domainRef.current?.focus()}
+              error={fieldErrors.city}
+              c={c}
+            />
+            <CField
+              ref={domainRef}
+              label={t.industryDomain || "Industry / Domain"}
+              value={form.domain}
+              onChangeText={(v: string) => setField("domain", v)}
+              placeholder="e.g. Logistics, Warehouse, Delivery"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              error={fieldErrors.domain}
               c={c}
             />
             <PasswordField
@@ -218,7 +245,7 @@ export default function CompanyRegisterScreen() {
               label={loading ? t.loading : t.register}
               onPress={handleRegister}
               disabled={loading}
-              accent={ACCENT}
+              accent={accentColor}
               c={c}
             />
           </View>

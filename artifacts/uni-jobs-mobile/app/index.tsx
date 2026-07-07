@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontFamily: "Inter_700Bold",
     marginBottom: 10,
+    letterSpacing: -0.5,
   },
   tagline: {
     fontSize: 17,

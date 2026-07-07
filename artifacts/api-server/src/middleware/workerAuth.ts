@@ -6,7 +6,12 @@ if (!jwtSecret) {
   throw new Error("JWT_SECRET environment variable is required but was not provided.");
 }
 
-export function adminAuth(req: Request, res: Response, next: NextFunction) {
+type AuthPayload = {
+  role?: string;
+  workerId?: string;
+};
+
+export function workerAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     res.status(401).json({ error: "Unauthorized" });
@@ -15,12 +20,19 @@ export function adminAuth(req: Request, res: Response, next: NextFunction) {
 
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, jwtSecret!) as { role?: string };
-    if (decoded.role !== "admin") {
-      res.status(403).json({ error: "Forbidden: Admin access is required" });
+    const decoded = jwt.verify(token, jwtSecret!) as AuthPayload;
+    
+    if (decoded.role === "admin") {
+      next();
       return;
     }
-    next();
+    
+    if (decoded.role === "worker" && decoded.workerId === req.params["id"]) {
+      next();
+      return;
+    }
+
+    res.status(403).json({ error: "Forbidden: Access is denied" });
   } catch (err) {
     res.status(401).json({ error: "Unauthorized" });
     return;

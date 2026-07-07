@@ -51,12 +51,16 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
  */
 async function validateWorkerSession(workerId: string, domain: string): Promise<boolean> {
   try {
+    const token = await AsyncStorage.getItem("worker_token");
     const baseUrl = /^(localhost|127\.|192\.168\.|10\.|172\.1[6-9]\.|172\.2[0-9]\.|172\.3[0-1]\.)/.test(domain)
       ? `http://${domain}/api`
       : `https://${domain}/api`;
     const response = await fetchWithTimeout(`${baseUrl}/workers/${workerId}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     });
     return response.ok;
   } catch {
@@ -174,7 +178,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function clearSession() {
     setSessionState({ role: null });
-    await AsyncStorage.removeItem(SESSION_KEY);
+    await Promise.all([
+      AsyncStorage.removeItem(SESSION_KEY),
+      AsyncStorage.removeItem("worker_token"),
+      AsyncStorage.removeItem("admin_token"),
+    ]);
   }
 
   const t = strings[lang];

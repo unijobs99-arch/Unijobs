@@ -21,12 +21,22 @@ router.post("/requirements", ensureCompanyApproved, async (req, res) => {
   }
 });
 
-router.get("/requirements", async (_req, res) => {
+router.get("/requirements", async (req, res) => {
   try {
-    const requirements = await Requirement.find()
-      .populate("companyId", "companyName city")
-      .sort({ createdAt: -1 });
-    res.json(requirements);
+    const page = Math.max(1, parseInt(req.query["page"] as string, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query["limit"] as string, 10) || 20);
+    const skip = (page - 1) * limit;
+
+    const [requirements, total] = await Promise.all([
+      Requirement.find()
+        .populate("companyId", "companyName city")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Requirement.countDocuments(),
+    ]);
+
+    res.json({ requirements, page, limit, total });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

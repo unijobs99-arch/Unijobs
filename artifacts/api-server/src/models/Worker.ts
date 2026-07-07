@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IWorker extends Document {
   name: string;
@@ -21,9 +21,8 @@ export interface IWorker extends Document {
     | "Loader"
     | "Tagging";
   availability: "available" | "notAvailable";
-  // Employment status tracking (optional)
-  employmentStatus?: "available" | "working";
-  currentCompanyId?: string | null;
+  employmentStatus: "available" | "working";
+  currentCompanyId?: Types.ObjectId | null;
   currentCompanyName?: string | null;
 }
 
@@ -58,15 +57,14 @@ const WorkerSchema = new Schema<IWorker>(
       enum: ["available", "notAvailable"],
       default: "available",
     },
-    // Track whether a worker is currently employed by a company
     employmentStatus: {
       type: String,
       enum: ["available", "working"],
       default: "available",
     },
-    // If employed, optionally reference the company (stored as string id)
     currentCompanyId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "Company",
       default: null,
     },
     currentCompanyName: {
@@ -77,7 +75,7 @@ const WorkerSchema = new Schema<IWorker>(
   { timestamps: true },
 );
 
-WorkerSchema.index({ city: 1, category: 1, availability: 1 });
+WorkerSchema.index({ city: 1, category: 1, availability: 1, employmentStatus: 1 });
 WorkerSchema.index({ phone: 1 });
 WorkerSchema.index({ aadhaar: 1 });
 

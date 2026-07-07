@@ -99,11 +99,12 @@ export default function CompanyDashboard() {
 
   if (loading) return <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: c.background }}><ActivityIndicator color={c.primary} size="large" /></View>;
 
-  const accent = "#065F46";
+  const headerBg = c.primary; // Dark navy #0F172A
+  const accent = c.accent; // Purple #7C3AED
 
   return (
     <View style={[styles.outer, { backgroundColor: c.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: accent }]}>
+      <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: headerBg }]}>
         <View>
           <Text style={styles.headerTitle}>{company?.companyName || t.dashboard}</Text>
           <StatusBadge status={company?.status || "pending"} t={t} />

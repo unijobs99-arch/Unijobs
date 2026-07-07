@@ -5,6 +5,8 @@ export interface ICompany extends Document {
   ownerName: string;
   email: string;
   phone: string;
+  city: string;
+  domain: string;
   password: string;
   status: "pending" | "approved" | "rejected";
 }
@@ -15,6 +17,8 @@ const CompanySchema = new Schema<ICompany>(
     ownerName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true, unique: true },
+    city: { type: String, required: true },
+    domain: { type: String, required: true },
     password: { type: String, required: true },
     status: {
       type: String,
@@ -25,7 +29,15 @@ const CompanySchema = new Schema<ICompany>(
   { timestamps: true },
 );
 
+CompanySchema.set("toJSON", {
+  transform: (_doc, ret) => {
+    delete (ret as any).password;
+    return ret;
+  },
+});
+
 CompanySchema.index({ status: 1 });
 CompanySchema.index({ email: 1 });
+CompanySchema.index({ phone: 1 });
 
 export default mongoose.model<ICompany>("Company", CompanySchema);

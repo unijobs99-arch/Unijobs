@@ -135,7 +135,7 @@ function ProfileView({ worker, onEdit, onToggleAvailability, toggling, t, c }: a
         </View>
         <Text style={[pStyles.name, { color: c.text }]}>{worker.name}</Text>
         <View style={[pStyles.badge, { backgroundColor: c.primaryLight }]}>
-          <Text style={[pStyles.badgeText, { color: c.primary }]}>{worker.category}</Text>
+          <Text style={[pStyles.badgeText, { color: c.accent }]}>{worker.category}</Text>
         </View>
         <View style={[pStyles.statusBadge, { backgroundColor: worker.availability === "available" ? "#DCFCE7" : "#FEE2E2" }]}>
           <Text style={[pStyles.statusText, { color: worker.availability === "available" ? "#166534" : "#991B1B" }]}>
@@ -150,7 +150,7 @@ function ProfileView({ worker, onEdit, onToggleAvailability, toggling, t, c }: a
         </View>
       ))}
       <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
-        <TouchableOpacity style={[pStyles.editBtn, { backgroundColor: c.primary, flex: 1 }]} onPress={onEdit} activeOpacity={0.85}>
+        <TouchableOpacity style={[pStyles.editBtn, { backgroundColor: c.accent, flex: 1 }]} onPress={onEdit} activeOpacity={0.85}>
           <Feather name="edit-2" size={16} color="#fff" />
           <Text style={pStyles.editBtnText}>Edit Profile</Text>
         </TouchableOpacity>

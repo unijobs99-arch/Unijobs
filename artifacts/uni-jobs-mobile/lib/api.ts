@@ -1,3 +1,5 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 
 const isLocalOrIP = /^(localhost|127\.|192\.168\.|10\.|172\.1[6-9]\.|172\.2[0-9]\.|172\.3[0-1]\.)/.test(domain || "");
@@ -77,6 +79,10 @@ export interface Worker {
   createdAt: string;
 }
 
+export interface WorkerAuthResponse extends Worker {
+  token: string;
+}
+
 export interface Company {
   _id: string;
   companyName: string;
@@ -100,12 +106,34 @@ export interface Requirement {
 
 export const api = {
   registerWorker: (body: Omit<Worker, "_id" | "createdAt">) =>
-    req<Worker>("/workers/register", { method: "POST", body: JSON.stringify(body) }),
+    req<WorkerAuthResponse>("/workers/register", { method: "POST", body: JSON.stringify(body) }),
 
-  getWorker: (id: string) => req<Worker>(`/workers/${id}`),
+  getWorker: async (id: string, companyId?: string) => {
+    const q = new URLSearchParams();
+    if (companyId) q.set("companyId", companyId);
 
-  updateWorker: (id: string, body: Partial<Worker>) =>
-    req<Worker>(`/workers/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    const token = await AsyncStorage.getItem("worker_token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token && !companyId) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const queryStr = q.toString();
+    return req<Worker>(`/workers/${id}${queryStr ? `?${queryStr}` : ""}`, { headers });
+  },
+
+  updateWorker: async (id: string, body: Partial<Worker>) => {
+    const token = await AsyncStorage.getItem("worker_token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return req<Worker>(`/workers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+      headers,
+    });
+  },
 
   updateWorkerEmployment: (
     id: string,
@@ -118,14 +146,21 @@ export const api = {
       body: JSON.stringify({ employmentStatus, companyId, companyName }),
     }),
 
-  toggleWorkerAvailability: (id: string, availability: "available" | "notAvailable") =>
-    req<Worker>(`/workers/${id}/availability`, {
+  toggleWorkerAvailability: async (id: string, availability: "available" | "notAvailable") => {
+    const token = await AsyncStorage.getItem("worker_token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return req<Worker>(`/workers/${id}/availability`, {
       method: "PUT",
       body: JSON.stringify({ availability }),
-    }),
+      headers,
+    });
+  },
 
   loginWorker: (phone: string) =>
-    req<Worker>("/workers/login", {
+    req<WorkerAuthResponse>("/workers/login", {
       method: "POST",
       body: JSON.stringify({ phone }),
     }),
@@ -163,27 +198,69 @@ export const api = {
   recordContact: (companyId: string, workerId: string, body?: { job?: string; location?: string }) =>
     req<any>(`/companies/${companyId}/contact/${workerId}`, { method: "POST", body: JSON.stringify(body || {}) }),
 
-  adminLogin: (secret: string) =>
-    req<{ ok: boolean }>("/admin/login", { method: "POST", body: JSON.stringify({ secret }) }),
+  adminLogin: async (secret: string) => {
+    const res = await req<{ token: string }>("/admin/login", { method: "POST", body: JSON.stringify({ secret }) });
+    if (res.token) {
+      await AsyncStorage.setItem("admin_token", res.token);
+    }
+    return res;
+  },
 
-  adminGetCompanies: (secret: string, status?: string) => {
-    const q = status ? `?status=${status}` : "";
-    return req<Company[]>(`/admin/companies${q}`, {
-      headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+  adminGetCompanies: async (status?: string, page?: number, limit?: number) => {
+    const token = await AsyncStorage.getItem("admin_token");
+    if (!token) {
+      const err: any = new Error("Missing admin token");
+      err.status = 401;
+      throw err;
+    }
+    const q = new URLSearchParams();
+    if (status) q.set("status", status);
+    if (page) q.set("page", page.toString());
+    if (limit) q.set("limit", limit.toString());
+    const queryStr = q.toString();
+    const url = `/admin/companies${queryStr ? `?${queryStr}` : ""}`;
+    return req<{ companies: Company[]; page: number; limit: number; total: number }>(url, {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     });
   },
 
-  adminUpdateStatus: (secret: string, id: string, status: "approved" | "rejected" | "pending") =>
-    req<Company>(`/admin/companies/${id}/status`, {
+  adminUpdateStatus: async (id: string, status: "approved" | "rejected" | "pending") => {
+    const token = await AsyncStorage.getItem("admin_token");
+    if (!token) {
+      const err: any = new Error("Missing admin token");
+      err.status = 401;
+      throw err;
+    }
+    return req<Company>(`/admin/companies/${id}/status`, {
       method: "PUT",
       body: JSON.stringify({ status }),
-      headers: { "Content-Type": "application/json", "x-admin-secret": secret },
-    }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+  },
 
-  adminGetWorkers: (secret: string) =>
-    req<Worker[]>("/admin/workers", {
-      headers: { "Content-Type": "application/json", "x-admin-secret": secret },
-    }),
+  adminGetWorkers: async (page?: number, limit?: number) => {
+    const token = await AsyncStorage.getItem("admin_token");
+    if (!token) {
+      const err: any = new Error("Missing admin token");
+      err.status = 401;
+      throw err;
+    }
+    const q = new URLSearchParams();
+    if (page) q.set("page", page.toString());
+    if (limit) q.set("limit", limit.toString());
+    const queryStr = q.toString();
+    const url = `/admin/workers${queryStr ? `?${queryStr}` : ""}`;
+    return req<{ workers: Worker[]; page: number; limit: number; total: number }>(url, {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+  },
 
-  getWorkerContacts: (workerId: string) => req<any[]>(`/workers/${workerId}/contacts`),
+  getWorkerContacts: async (workerId: string) => {
+    const token = await AsyncStorage.getItem("worker_token");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return req<any[]>(`/workers/${workerId}/contacts`, { headers });
+  },
 };

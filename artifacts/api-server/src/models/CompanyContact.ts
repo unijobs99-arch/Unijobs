@@ -21,7 +21,7 @@ const CompanyContactSchema = new Schema<ICompanyContact>(
   { timestamps: true },
 );
 
-CompanyContactSchema.index({ workerId: 1 });
+CompanyContactSchema.index({ workerId: 1, companyId: 1 }, { unique: true });
 CompanyContactSchema.index({ createdAt: -1 });
 
 export default mongoose.model<ICompanyContact>("CompanyContact", CompanyContactSchema);

@@ -6,14 +6,29 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
+const isProduction = process.env["NODE_ENV"] === "production";
+const allowedOrigin = process.env["ALLOWED_ORIGIN"];
+
+if (isProduction && !allowedOrigin) {
+  throw new Error("ALLOWED_ORIGIN environment variable is required in production mode.");
+}
+
 const app: Express = express();
 
 app.use(helmet());
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: "Too many requests, please try again later." },
-}));
+app.use(
+  cors({
+    origin: allowedOrigin || "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  }),
+);
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: "Too many requests, please try again later." },
+  }),
+);
 app.use(
   pinoHttp({
     logger,
@@ -33,12 +48,8 @@ app.use(
     },
   }),
 );
-app.use(cors({
-  origin: process.env["ALLOWED_ORIGIN"] || "*",
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
 app.use("/api", router);
 

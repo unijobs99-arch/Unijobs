@@ -13,6 +13,7 @@ export interface IRequirement extends Document {
     | "Loader"
     | "Tagging";
   city: string;
+  wage: string;
   vacancies: number;
 }
 
@@ -35,6 +36,7 @@ const RequirementSchema = new Schema<IRequirement>(
       ],
     },
     city: { type: String, required: true },
+    wage: { type: String, required: true },
     vacancies: { type: Number, required: true, min: 1 },
   },
   { timestamps: true },

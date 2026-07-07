@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -29,27 +30,86 @@ export default function AdminScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const fetchAll = useCallback(async () => {
-    if (!session.adminSecret) return;
-    setLoading(true);
-    try {
-      const [cos, ws] = await Promise.all([
-        api.adminGetCompanies(session.adminSecret),
-        api.adminGetWorkers(session.adminSecret),
-      ]);
-      setCompanies(cos);
-      setWorkers(ws);
-    } catch {}
-    finally { setLoading(false); setRefreshing(false); }
-  }, [session.adminSecret]);
+  // Pagination states
+  const [companiesPage, setCompaniesPage] = useState(1);
+  const [companiesHasMore, setCompaniesHasMore] = useState(true);
+  const [loadingMoreCompanies, setLoadingMoreCompanies] = useState(false);
 
-  useEffect(() => { if (isLoggedIn) fetchAll(); }, [isLoggedIn, fetchAll]);
+  const [workersPage, setWorkersPage] = useState(1);
+  const [workersHasMore, setWorkersHasMore] = useState(true);
+  const [loadingMoreWorkers, setLoadingMoreWorkers] = useState(false);
+
+  const handleAuthError = useCallback(async () => {
+    await AsyncStorage.removeItem("admin_token");
+    await clearSession();
+  }, [clearSession]);
+
+  const fetchCompanies = useCallback(async (page: number, isRefresh = false) => {
+    if (!session.adminSecret) return;
+    if (page === 1) {
+      if (!isRefresh) setLoading(true);
+    } else {
+      setLoadingMoreCompanies(true);
+    }
+
+    try {
+      const res = await api.adminGetCompanies(undefined, page, 20);
+      const newCompanies = res.companies || [];
+      setCompanies((prev) => (page === 1 ? newCompanies : [...prev, ...newCompanies]));
+      setCompaniesPage(page);
+      setCompaniesHasMore(page * 20 < res.total);
+    } catch (err: any) {
+      if (err.status === 401 || err.message === "Missing admin token") {
+        await handleAuthError();
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMoreCompanies(false);
+    }
+  }, [session.adminSecret, handleAuthError]);
+
+  const fetchWorkers = useCallback(async (page: number, isRefresh = false) => {
+    if (!session.adminSecret) return;
+    if (page === 1) {
+      if (!isRefresh) setLoading(true);
+    } else {
+      setLoadingMoreWorkers(true);
+    }
+
+    try {
+      const res = await api.adminGetWorkers(page, 20);
+      const newWorkers = res.workers || [];
+      setWorkers((prev) => (page === 1 ? newWorkers : [...prev, ...newWorkers]));
+      setWorkersPage(page);
+      setWorkersHasMore(page * 20 < res.total);
+    } catch (err: any) {
+      if (err.status === 401 || err.message === "Missing admin token") {
+        await handleAuthError();
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMoreWorkers(false);
+    }
+  }, [session.adminSecret, handleAuthError]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchCompanies(1, true),
+      fetchWorkers(1, true),
+    ]);
+  }, [fetchCompanies, fetchWorkers]);
+
+  useEffect(() => { if (isLoggedIn) handleRefresh(); }, [isLoggedIn, handleRefresh]);
 
   async function handleLogin() {
     setLoginError(""); setLoginLoading(true);
     try {
-      await api.adminLogin(password);
-      await setSession({ role: "admin", adminSecret: password });
+      const res = await api.adminLogin(password);
+      await AsyncStorage.setItem("admin_token", res.token);
+      await setSession({ role: "admin", adminSecret: res.token });
     } catch { setLoginError(t.wrongPassword); }
     finally { setLoginLoading(false); }
   }
@@ -58,20 +118,28 @@ export default function AdminScreen() {
     if (!session.adminSecret) return;
     setUpdatingId(id);
     try {
-      const updated = await api.adminUpdateStatus(session.adminSecret, id, status);
+      const updated = await api.adminUpdateStatus(id, status);
       setCompanies((cs) => cs.map((co) => co._id === id ? updated : co));
-    } catch {}
-    finally { setUpdatingId(null); }
+    } catch (err: any) {
+      if (err.status === 401 || err.message === "Missing admin token") {
+        await handleAuthError();
+      }
+    } finally { setUpdatingId(null); }
   }
 
-  async function handleLogout() { await clearSession(); router.replace("/"); }
+  async function handleLogout() {
+    await AsyncStorage.removeItem("admin_token");
+    await clearSession();
+    router.replace("/");
+  }
 
-  const accent = "#1F2937";
+  const headerBg = c.primary; // Dark navy #0F172A
+  const accent = c.accent; // Purple #7C3AED
 
   if (!isLoggedIn) {
     return (
       <View style={[styles.outer, { backgroundColor: c.background }]}>
-        <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: accent }]}>
+        <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: headerBg }]}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={16}>
             <Feather name="arrow-left" size={22} color="#fff" />
           </TouchableOpacity>
@@ -105,7 +173,7 @@ export default function AdminScreen() {
 
   return (
     <View style={[styles.outer, { backgroundColor: c.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: accent }]}>
+      <View style={[styles.header, { paddingTop: topPad + 8, backgroundColor: headerBg }]}>
         <Text style={styles.headerTitle}>{t.adminPanel || "Admin Panel"}</Text>
         <TouchableOpacity onPress={handleLogout} hitSlop={12}>
           <Feather name="log-out" size={20} color="rgba(255,255,255,0.8)" />
@@ -127,22 +195,36 @@ export default function AdminScreen() {
           data={companies}
           keyExtractor={(i) => i._id}
           contentContainerStyle={{ padding: 16, paddingBottom: botPad + 24, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAll(); }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           ListEmptyComponent={<EmptyState label="No companies yet" c={c} />}
           renderItem={({ item }) => (
             <CompanyRow co={item} onApprove={() => handleUpdateStatus(item._id, "approved")}
               onReject={() => handleUpdateStatus(item._id, "rejected")}
               updating={updatingId === item._id} t={t} c={c} />
           )}
+          onEndReached={() => {
+            if (companiesHasMore && !loadingMoreCompanies && !loading) {
+              fetchCompanies(companiesPage + 1);
+            }
+          }}
+          onEndReachedThreshold={0.2}
+          ListFooterComponent={() => loadingMoreCompanies ? <ActivityIndicator color={accent} style={{ marginVertical: 10 }} /> : null}
         />
       ) : (
         <FlatList
           data={workers}
           keyExtractor={(i) => i._id}
           contentContainerStyle={{ padding: 16, paddingBottom: botPad + 24, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAll(); }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
           ListEmptyComponent={<EmptyState label="No workers yet" c={c} />}
           renderItem={({ item }) => <WorkerRow worker={item} c={c} />}
+          onEndReached={() => {
+            if (workersHasMore && !loadingMoreWorkers && !loading) {
+              fetchWorkers(workersPage + 1);
+            }
+          }}
+          onEndReachedThreshold={0.2}
+          ListFooterComponent={() => loadingMoreWorkers ? <ActivityIndicator color={accent} style={{ marginVertical: 10 }} /> : null}
         />
       )}
     </View>

@@ -28,7 +28,7 @@ export default function WorkerDetailsScreen() {
     async function fetchWorker() {
       if (!workerId) return;
       try {
-        const w = await api.getWorker(workerId);
+        const w = await api.getWorker(workerId, session.companyId);
         setWorker(w);
       } catch (e) {
         console.error("Error fetching worker:", e);
@@ -37,7 +37,7 @@ export default function WorkerDetailsScreen() {
       }
     }
     fetchWorker();
-  }, [workerId]);
+  }, [workerId, session.companyId]);
 
   useEffect(() => {
     async function fetchCompany() {

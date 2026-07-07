@@ -16,8 +16,8 @@ export default function RoleScreen() {
 
   const roles = [
     { label: t.worker, desc: t.workerDesc, icon: "user" as const, path: "/worker/register", bg: c.primary },
-    { label: t.employer, desc: t.employerDesc, icon: "briefcase" as const, path: "/company/register", bg: "#065F46" },
-    { label: t.hrSolutions, desc: t.hrSolutionsDesc, icon: "zap" as const, path: "/hr", bg: "#6366F1" },
+    { label: t.employer, desc: t.employerDesc, icon: "briefcase" as const, path: "/company/register", bg: "#1E293B" },
+    { label: t.hrSolutions, desc: t.hrSolutionsDesc, icon: "zap" as const, path: "/hr", bg: c.accent },
   ];
 
   return (
@@ -62,13 +62,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 24 },
   header: { paddingVertical: 8 },
   titleArea: { paddingVertical: 18, alignItems: "center" },
-  title: { fontSize: 28, fontWeight: "700" as const, fontFamily: "Inter_700Bold", textAlign: "center" },
+  title: { fontSize: 28, fontWeight: "700" as const, fontFamily: "Inter_700Bold", textAlign: "center", letterSpacing: -0.5 },
   subtitle: { fontSize: 15, fontFamily: "Inter_400Regular", marginTop: 6, textAlign: "center" },
   cardsContainer: { flex: 1, gap: 10, justifyContent: "center", paddingBottom: 16 },
   card: { borderRadius: 20, paddingHorizontal: 20, paddingVertical: 22, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   cardContent: { alignItems: "center", gap: 12 },
   cardIconBg: { width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
   cardTextArea: { alignItems: "center", gap: 6 },
-  cardTitle: { fontSize: 22, fontWeight: "700" as const, color: "#fff", fontFamily: "Inter_700Bold" },
+  cardTitle: { fontSize: 22, fontWeight: "700" as const, color: "#fff", fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   cardDesc: { fontSize: 14, color: "rgba(255,255,255,0.8)", fontFamily: "Inter_400Regular", textAlign: "center", maxWidth: "90%" },
 });
+

@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -113,6 +114,9 @@ export default function WorkerRegisterScreen() {
     setError(""); setLoading(true);
     try {
       const w = await api.registerWorker(form as any);
+      if ((w as any).token) {
+        await AsyncStorage.setItem("worker_token", (w as any).token);
+      }
       await setSession({ role: "worker", workerId: w._id });
       router.replace("/worker/dashboard");
     } catch (e: any) {
@@ -128,6 +132,9 @@ export default function WorkerRegisterScreen() {
     setLoginError(""); setLoading(true);
     try {
       const w = await api.loginWorker(loginPhone);
+      if ((w as any).token) {
+        await AsyncStorage.setItem("worker_token", (w as any).token);
+      }
       await setSession({ role: "worker", workerId: w._id });
       router.replace("/worker/dashboard");
     } catch (e: any) {
@@ -148,10 +155,10 @@ export default function WorkerRegisterScreen() {
         {(["register", "login"] as Tab[]).map((tb) => (
           <TouchableOpacity
             key={tb}
-            style={[styles.tab, tab === tb && { borderBottomColor: c.primary, borderBottomWidth: 2 }]}
+            style={[styles.tab, tab === tb && { borderBottomColor: c.accent, borderBottomWidth: 2 }]}
             onPress={() => { setTab(tb); setError(""); setFieldErrors({}); setLoginError(""); }}
           >
-            <Text style={[styles.tabText, { color: tab === tb ? c.primary : c.mutedForeground }]}>
+            <Text style={[styles.tabText, { color: tab === tb ? c.accent : c.mutedForeground }]}>
               {tb === "register" ? t.register : t.loginByPhone}
             </Text>
           </TouchableOpacity>
@@ -174,7 +181,7 @@ export default function WorkerRegisterScreen() {
               value={loginPhone}
               onChangeText={(v: string) => { setLoginPhone(v); setLoginError(""); }}
               keyboardType="phone-pad"
-              placeholder="10-digit mobile number"
+              placeholder={t.phonePlaceholder}
               maxLength={10}
               returnKeyType="done"
               onSubmitEditing={handleLogin}
@@ -215,7 +222,7 @@ export default function WorkerRegisterScreen() {
               value={form.phone}
               onChangeText={(v: string) => setField("phone", v)}
               keyboardType="phone-pad"
-              placeholder="10-digit mobile number"
+              placeholder={t.phonePlaceholder}
               maxLength={10}
               returnKeyType="next"
               onSubmitEditing={() => aadhaarRef.current?.focus()}
@@ -228,7 +235,7 @@ export default function WorkerRegisterScreen() {
               value={form.aadhaar}
               onChangeText={(v: string) => setField("aadhaar", v)}
               keyboardType="number-pad"
-              placeholder="12-digit Aadhaar"
+              placeholder={t.aadhaarPlaceholder}
               maxLength={12}
               returnKeyType="next"
               onSubmitEditing={() => uanRef.current?.focus()}
@@ -240,7 +247,7 @@ export default function WorkerRegisterScreen() {
               label={t.uan}
               value={form.uan}
               onChangeText={(v: string) => setField("uan", v)}
-              placeholder="Universal Account Number"
+              placeholder={t.uanPlaceholder}
               returnKeyType="next"
               onSubmitEditing={() => cityRef.current?.focus()}
               error={fieldErrors.uan}
@@ -256,7 +263,7 @@ export default function WorkerRegisterScreen() {
               c={c}
             />
             <PickerField
-              label="State"
+              label={t.state}
               value={form.state}
               options={INDIAN_STATES}
               onSelect={(v: string) => setField("state", v)}
@@ -274,7 +281,7 @@ export default function WorkerRegisterScreen() {
             />
             <Field
               ref={areaRef}
-              label="Area"
+              label={t.area}
               value={form.area}
               onChangeText={(v: string) => setField("area", v)}
               returnKeyType="next"
@@ -294,7 +301,7 @@ export default function WorkerRegisterScreen() {
               label={t.experience}
               value={form.experience}
               onChangeText={(v: string) => setField("experience", v)}
-              placeholder="e.g. 2 years"
+              placeholder={t.expPlaceholder}
               returnKeyType="done"
               onSubmitEditing={handleRegister}
               error={fieldErrors.experience}
@@ -412,14 +419,14 @@ function PickerField({ label, value, options, onSelect, c }: any) {
 function PrimaryButton({ label, onPress, disabled, c }: any) {
   return (
     <TouchableOpacity
-      style={[fStyles.btn, { backgroundColor: disabled ? c.muted : c.primary }]}
+      style={[fStyles.btn, { backgroundColor: disabled ? c.muted : c.accent }]}
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.85}
     >
       {disabled
         ? <ActivityIndicator color="#fff" size="small" />
-        : <Text style={[fStyles.btnText, { color: c.primaryForeground }]}>{label}</Text>}
+        : <Text style={[fStyles.btnText, { color: "#fff" }]}>{label}</Text>}
     </TouchableOpacity>
   );
 }
