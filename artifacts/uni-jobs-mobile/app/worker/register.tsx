@@ -83,7 +83,8 @@ export default function WorkerRegisterScreen() {
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const [tab, setTab] = useState<Tab>("register");
-  const [loading, setLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loginPhone, setLoginPhone] = useState("");
@@ -106,40 +107,40 @@ export default function WorkerRegisterScreen() {
   }
 
   async function handleRegister() {
+    if (registerLoading) return;
+
     const errors = validateRegister(form, t);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
-    setError(""); setLoading(true);
+    setError(""); setRegisterLoading(true);
     try {
-      const w = await api.registerWorker(form as any);
-      if ((w as any).token) {
-        await AsyncStorage.setItem("worker_token", (w as any).token);
-      }
+      const w = await api.registerWorker(form);
+      await AsyncStorage.setItem("worker_token", w.token);
       await setSession({ role: "worker", workerId: w._id });
       router.replace("/worker/dashboard");
     } catch (e: any) {
       setError(e.message);
-    } finally { setLoading(false); }
+    } finally { setRegisterLoading(false); }
   }
 
   async function handleLogin() {
+    if (loginLoading) return;
+
     if (!/^\d{10}$/.test(loginPhone)) {
       setLoginError(t.invalidPhone);
       return;
     }
-    setLoginError(""); setLoading(true);
+    setLoginError(""); setLoginLoading(true);
     try {
       const w = await api.loginWorker(loginPhone);
-      if ((w as any).token) {
-        await AsyncStorage.setItem("worker_token", (w as any).token);
-      }
+      await AsyncStorage.setItem("worker_token", w.token);
       await setSession({ role: "worker", workerId: w._id });
       router.replace("/worker/dashboard");
     } catch (e: any) {
       setLoginError(e.message);
-    } finally { setLoading(false); }
+    } finally { setLoginLoading(false); }
   }
 
   return (
@@ -189,9 +190,9 @@ export default function WorkerRegisterScreen() {
               c={c}
             />
             <PrimaryButton
-              label={loading ? t.loading : t.find}
+              label={loginLoading ? t.loading : t.find}
               onPress={handleLogin}
-              disabled={loading}
+              disabled={loginLoading}
               c={c}
             />
           </View>
@@ -315,9 +316,9 @@ export default function WorkerRegisterScreen() {
               c={c}
             />
             <PrimaryButton
-              label={loading ? t.loading : t.register}
+              label={registerLoading ? t.loading : t.register}
               onPress={handleRegister}
-              disabled={loading}
+              disabled={registerLoading}
               c={c}
             />
           </View>

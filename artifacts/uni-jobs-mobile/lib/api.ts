@@ -83,6 +83,11 @@ export interface WorkerAuthResponse extends Worker {
   token: string;
 }
 
+export type WorkerRegistrationInput = Pick<
+  Worker,
+  "name" | "fatherName" | "phone" | "aadhaar" | "uan" | "address" | "state" | "city" | "area" | "education" | "experience" | "category"
+>;
+
 export interface Company {
   _id: string;
   companyName: string;
@@ -105,7 +110,7 @@ export interface Requirement {
 }
 
 export const api = {
-  registerWorker: (body: Omit<Worker, "_id" | "createdAt">) =>
+  registerWorker: (body: WorkerRegistrationInput) =>
     req<WorkerAuthResponse>("/workers/register", { method: "POST", body: JSON.stringify(body) }),
 
   getWorker: async (id: string, companyId?: string) => {
